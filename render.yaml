@@ -1,3 +1,10 @@
+databases:
+  - name: jobber-db
+    databaseName: matchmaking
+    user: matchmaking
+    plan: free
+    ipAllowList: []
+
 services:
   - type: web
     name: jobber-frontend
@@ -26,10 +33,3 @@ services:
       - key: GATEWAY_CORS_ORIGINS
         sync: false
         value: '["https://jobber-frontend.onrender.com"]'
-
-  - type: postgresql
-    name: jobber-db
-    database: matchmaking
-    user: matchmaking
-    plan: free
-    ipAllowList: []
