@@ -9,11 +9,11 @@ services:
   - type: web
     name: jobber-frontend
     runtime: node
-    buildCommand: cd frontend && npm install --no-audit --no-fund && chmod +x node_modules/.bin/next && NEXT_PUBLIC_API_URL=https://jobber-api.onrender.com npx next build
+    buildCommand: cd frontend && npm install --no-audit --no-fund && chmod +x node_modules/.bin/next && NEXT_PUBLIC_API_URL=https://jobber-api-vbzg.onrender.com npx next build
     startCommand: cd frontend && npx next start -p $PORT
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        value: https://jobber-api.onrender.com
+        value: https://jobber-api-vbzg.onrender.com
 
   - type: web
     name: jobber-api
@@ -30,4 +30,4 @@ services:
       - key: GATEWAY_OPENAI_API_KEY
         sync: false
       - key: GATEWAY_CORS_ORIGINS
-        value: '["https://jobber-frontend.onrender.com"]'
+        value: '["https://jobber-frontend-puvi.onrender.com"]'
