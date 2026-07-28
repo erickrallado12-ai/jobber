@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+import "google/protobuf/descriptor.proto";
+
+package resume.v1;
+
+extend google.protobuf.FileOptions {
+  optional string python_package = 50000;
+}
+
+option (python_package) = "generated";
+
+
+service ResumeProcessor {
+  rpc ProcessResume (ResumeRequest) returns (ResumeResponse);
+}
+
+
+message ResumeRequest {
+  bytes  file_content = 1;
+  string file_extension = 2;  // "pdf" | "docx"
+}
+
+
+message ResumeResponse {
+  PersonalDetails personal_details = 1;
+  string           bio              = 2;
+  repeated Experience experience   = 3;
+  repeated Education  education    = 4;
+  repeated string     skills       = 5;
+}
+
+
+message PersonalDetails {
+  string first_name  = 1;
+  string last_name   = 2;
+  string email       = 3;
+  string phone       = 4;
+  string country_code = 5;
+  string address     = 6;
+  string avatar_url  = 7;
+}
+
+message Experience {
+  string   id            = 1;
+  string   company       = 2;
+  string   position      = 3;
+  string   location      = 4;
+  string   start_date    = 5;
+  string   end_date      = 6;
+  bool     is_current    = 7;
+  repeated string highlights = 8;
+}
+
+message Education {
+  string  id            = 1;
+  string  institution   = 2;
+  string  degree        = 3;
+  string  field_of_study = 4;
+  string  start_date    = 5;
+  string  end_date      = 6;
+  float   gpa           = 7;
+  string  description   = 8;
+}

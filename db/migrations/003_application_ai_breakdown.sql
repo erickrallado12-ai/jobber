@@ -1,0 +1,2 @@
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS ai_strengths JSONB DEFAULT '[]';
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS ai_gaps JSONB DEFAULT '[]';

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package processor;
+
+message ProcessRequest {
+  bytes  file_content  = 1;
+  string file_extension = 2;  // "pdf" | "docx"
+}
+
+message ProcessResponse {
+  string status   = 1;  // "success" | "error"
+  string json_data = 2; // JSON with content_blocks, metadata, etc.
+}
+
+service DocumentProcessor {
+  rpc ProcessDocument (ProcessRequest) returns (ProcessResponse);
+}

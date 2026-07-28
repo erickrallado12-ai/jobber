@@ -1,0 +1,16 @@
+fastapi[standard]>=0.113.0
+pydantic>=2.7.0
+uvicorn
+docling
+pillow
+numpy
+pandas
+grpcio>=1.68.0
+grpcio-tools>=1.68.0
+protobuf>=5.29.0,<6
+opencv-python-headless
+opentelemetry-api>=1.27.0
+opentelemetry-sdk>=1.27.0
+opentelemetry-exporter-otlp-proto-grpc>=1.27.0
+opentelemetry-instrumentation-grpc>=0.48b0
+prometheus-client>=0.21.0

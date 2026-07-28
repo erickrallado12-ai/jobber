@@ -1,0 +1,163 @@
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - certbot-conf:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+    depends_on:
+      - frontend
+      - api-gateway
+    networks:
+      - backend
+    restart: always
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot-conf:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - backend
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - backend
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  matchmaking-service:
+    build:
+      context: ..
+      dockerfile: matchmaking-service/Dockerfile
+    environment:
+      MATCHMAKING_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      MATCHMAKING_OPENAI_API_KEY: ${OPENAI_API_KEY}
+      MATCHMAKING_JWT_SECRET: ${JWT_SECRET}
+      OTEL_SERVICE_NAME: matchmaking-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+    restart: always
+
+  docling-service:
+    build:
+      context: ..
+      dockerfile: docling-service/Dockerfile
+    environment:
+      - DOCLING_GRPC_PORT=50052
+      - OTEL_SERVICE_NAME=docling-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    networks:
+      - backend
+    restart: always
+
+  ingestion-service:
+    build:
+      context: ..
+      dockerfile: ingestion-service/Dockerfile
+    environment:
+      - INGESTION_GRPC_HOST=0.0.0.0
+      - INGESTION_GRPC_PORT=50051
+      - INGESTION_DOCLING_SERVICE_HOST=docling-service
+      - INGESTION_DOCLING_SERVICE_PORT=50052
+      - INGESTION_OPENAI_API_KEY=${OPENAI_API_KEY}
+      - INGESTION_OPENAI_MODEL=gpt-4o-mini
+      - OTEL_SERVICE_NAME=ingestion-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    depends_on:
+      - docling-service
+    networks:
+      - backend
+    restart: always
+
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: api-gateway/Dockerfile
+    environment:
+      - GATEWAY_CORS_ORIGINS=["https://${DOMAIN}","http://${DOMAIN}"]
+      - GATEWAY_INGESTION_SERVICE_HOST=ingestion-service
+      - GATEWAY_INGESTION_SERVICE_PORT=50051
+      - GATEWAY_MATCHMAKING_SERVICE_URL=http://matchmaking-service:8001
+      - OTEL_SERVICE_NAME=api-gateway
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    depends_on:
+      - ingestion-service
+      - matchmaking-service
+    networks:
+      - backend
+    restart: always
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_URL=https://${DOMAIN}
+    depends_on:
+      - api-gateway
+    networks:
+      - backend
+    restart: always
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    ports:
+      - "16686:16686"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks:
+      - backend
+    restart: always
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - backend
+    restart: always
+
+  grafana:
+    image: grafana/grafana:10.4.1
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+    volumes:
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - backend
+    restart: always
+
+volumes:
+  pgdata:
+  grafana_data:
+  certbot-conf:
+  certbot-www:
+
+networks:
+  backend:
+    driver: bridge

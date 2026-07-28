@@ -1,0 +1,152 @@
+# Add Full Observability Stack: OpenTelemetry + Prometheus + Grafana + Jaeger
+
+## Context
+
+The project has 4 Python microservices (2 FastAPI, 2 gRPC) with zero observability. We're adding the industry-standard observability stack to trace requests across all services, collect metrics, and visualize everything.
+
+- **OpenTelemetry (OTel)**: Vendor-agnostic SDK for traces + metrics auto-instrumentation
+- **Jaeger**: Distributed tracing UI (receiving OTLP traces from all services)
+- **Prometheus**: Metrics scraper (scrapes `/metrics` endpoints from each service)
+- **Grafana**: Dashboard UI (auto-provisions Prometheus as data source)
+
+## Architecture
+
+```
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│  API Gateway │  │  Matchmaking │  │  Ingestion   │  │   Docling    │
+│  (FastAPI)   │  │  (FastAPI)   │  │  (gRPC async)│  │  (gRPC sync) │
+│  :8000       │  │  :8001       │  │  :50051      │  │  :50052      │
+└──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
+       │ OTLP            │ OTLP            │ OTLP            │ OTLP
+       │ traces          │ traces          │ traces          │ traces
+       ▼                 ▼                 ▼                 ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                    Jaeger (all-in-one)                          │
+  │                    UI: :16686  OTLP: :4317                     │
+  └─────────────────────────────────────────────────────────────────┘
+
+  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+  │  API Gateway │  │  Matchmaking │  │  Ingestion   │  ┌──────────────┐
+  │  /metrics    │  │  /metrics    │  │  :9051       │  │   Docling    │
+  │  (port 8000) │  │  (port 8001) │  │  prometheus  │  │  :9052       │
+  └──────┬───────┘  └──────┬───────┘  │  client      │  │  prometheus  │
+       │ scrape             │ scrape   └──────┬───────┘  │  client      │
+       ▼                  ▼                  ▼           └──────┬───────┘
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                    Prometheus                                   │
+  │                    UI: :9090                                    │
+  └──────────────────────────┬──────────────────────────────────────┘
+                             │ query
+                             ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                    Grafana                                      │
+  │                    UI: :3001  (admin/admin)                    │
+  │                    Auto-provisions Prometheus datasource        │
+  └─────────────────────────────────────────────────────────────────┘
+```
+
+## Implementation Steps
+
+### Step 1: Create monitoring config files
+
+**New files:**
+
+- `monitoring/prometheus.yml` — Prometheus scrape config targeting all 4 services
+- `monitoring/grafana/provisioning/datasources/datasource.yml` — Auto-provisions Prometheus as Grafana data source
+- `monitoring/grafana/provisioning/dashboards/dashboard.yml` — Points Grafana to dashboard JSON directory
+
+### Step 2: Add Docker services to `docker-compose.yml`
+
+Add 3 new services:
+
+| Service | Image | Ports | Purpose |
+|---------|-------|-------|---------|
+| `jaeger` | `jaegertracing/all-in-one:1.55` | `16686` (UI), `4317` (OTLP gRPC) | Trace collector + UI |
+| `prometheus` | `prom/prometheus:v2.51.0` | `9090` (UI) | Metrics storage + query |
+| `grafana` | `grafana/grafana:10.4.1` | `3001→3000` (UI) | Dashboards |
+
+Also add env vars to all 4 Python services:
+- `OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317`
+- `OTEL_SERVICE_NAME=<service-name>`
+
+Add exposed ports for gRPC service metrics:
+- `ingestion-service`: expose `9051`
+- `docling-service`: expose `9052`
+
+### Step 3: Instrument FastAPI services (API Gateway + Matchmaking Service)
+
+**Files:** `api-gateway/app/main.py`, `matchmaking-service/app/main.py`
+
+**Dependencies to add to `requirements.txt`:**
+```
+opentelemetry-api>=1.27.0
+opentelemetry-sdk>=1.27.0
+opentelemetry-exporter-otlp-proto-grpc>=1.27.0
+opentelemetry-instrumentation-fastapi>=0.48b0
+opentelemetry-instrumentation-requests>=0.48b0
+prometheus-client>=0.21.0
+prometheus-fastapi-instrumentator>=7.0.0
+```
+
+**Code changes in `main.py`:**
+1. Before app creation: init `TracerProvider` with `OTLPSpanExporter` → Jaeger
+2. After app creation: `FastAPIInstrumentor.instrument_app(app)`
+3. After app creation: `Instrumentator().instrument(app).expose(app, endpoint="/metrics")`
+4. `RequestsInstrumentor().instrument()` for outbound HTTP call tracing
+
+### Step 4: Instrument gRPC services (Ingestion + Docling)
+
+**Files:** `ingestion-service/app/main.py`, `docling-service/app/main_grpc.py`
+
+**Dependencies to add to `requirements.txt`:**
+```
+opentelemetry-api>=1.27.0
+opentelemetry-sdk>=1.27.0
+opentelemetry-exporter-otlp-proto-grpc>=1.27.0
+opentelemetry-instrumentation-grpc>=0.48b0
+prometheus-client>=0.21.0
+```
+
+**Code changes in `main.py` / `main_grpc.py`:**
+1. Before server creation: init `TracerProvider` with `OTLPSpanExporter` → Jaeger
+2. `GrpcInstrumentorServer().instrument()` for auto-instrumenting gRPC server
+3. `start_http_server(METRICS_PORT)` from `prometheus_client` to expose metrics endpoint
+   - Ingestion: port `9051`
+   - Docling: port `9052`
+
+### Step 5: Rebuild all 4 services
+
+- `docker compose build api-gateway matchmaking-service ingestion-service docling-service`
+- `docker compose up -d`
+
+## Metrics Exposed
+
+Each service will automatically expose:
+- **HTTP request metrics** (FastAPI): `http_requests_total`, `http_request_duration_seconds`, `http_request_size_bytes`, etc.
+- **gRPC server metrics**: `grpc_server_handled_total`, `grpc_server_handling_seconds`, `grpc_server_started_total`
+- **Trace spans**: Every request creates a span with timing, status, attributes
+
+## Verification
+
+1. Jaeger UI: `http://localhost:16686` — see traces from all 4 services
+2. Prometheus UI: `http://localhost:9090` — query `http_requests_total`, `grpc_server_handled_total`
+3. Grafana UI: `http://localhost:3001` (admin/admin) — Prometheus data source auto-provisioned, create dashboards
+4. Generate traffic (browse jobs, apply, etc.) and verify traces appear in Jaeger
+
+## Relevant Files
+
+### New files
+- `monitoring/prometheus.yml`
+- `monitoring/grafana/provisioning/datasources/datasource.yml`
+- `monitoring/grafana/provisioning/dashboards/dashboard.yml`
+
+### Modified files
+- `docker-compose.yml` — add Jaeger, Prometheus, Grafana services + env vars
+- `api-gateway/requirements.txt` — add OTel deps
+- `api-gateway/app/main.py` — add OTel init + FastAPI instrumentation
+- `matchmaking-service/requirements.txt` — add OTel deps
+- `matchmaking-service/app/main.py` — add OTel init + FastAPI instrumentation
+- `ingestion-service/requirements.txt` — add OTel deps
+- `ingestion-service/app/main.py` — add OTel init + gRPC instrumentation + prometheus metrics
+- `docling-service/requirements.txt` — add OTel deps
+- `docling-service/app/main_grpc.py` — add OTel init + gRPC instrumentation + prometheus metrics

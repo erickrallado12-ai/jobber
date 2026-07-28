@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "api-gateway"
+    static_configs:
+      - targets: ["api-gateway:8000"]
+    metrics_path: "/metrics"
+
+  - job_name: "matchmaking-service"
+    static_configs:
+      - targets: ["matchmaking-service:8001"]
+    metrics_path: "/metrics"
+
+  - job_name: "ingestion-service"
+    static_configs:
+      - targets: ["ingestion-service:9051"]
+    metrics_path: "/metrics"
+
+  - job_name: "docling-service"
+    static_configs:
+      - targets: ["docling-service:9052"]
+    metrics_path: "/metrics"

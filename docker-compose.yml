@@ -1,0 +1,154 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: matchmaking
+      POSTGRES_PASSWORD: matchmaking_secret
+      POSTGRES_DB: matchmaking
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - backend
+
+  matchmaking-service:
+    build:
+      context: .
+      dockerfile: matchmaking-service/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      MATCHMAKING_DATABASE_URL: postgresql+asyncpg://matchmaking:matchmaking_secret@postgres:5432/matchmaking
+      MATCHMAKING_OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-placeholder}
+      OTEL_SERVICE_NAME: matchmaking-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    depends_on:
+      - postgres
+    networks:
+      - backend
+
+  docling-service:
+    build:
+      context: .
+      dockerfile: docling-service/Dockerfile
+    ports:
+      - "50052:50052"
+      - "9052:9052"
+    environment:
+      - DOCLING_GRPC_PORT=50052
+      - OTEL_SERVICE_NAME=docling-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    networks:
+      - backend
+
+  ingestion-service:
+    build:
+      context: .
+      dockerfile: ingestion-service/Dockerfile
+    ports:
+      - "50051:50051"
+      - "9051:9051"
+    environment:
+      - INGESTION_GRPC_HOST=0.0.0.0
+      - INGESTION_GRPC_PORT=50051
+      - INGESTION_DOCLING_SERVICE_HOST=docling-service
+      - INGESTION_DOCLING_SERVICE_PORT=50052
+      - INGESTION_OPENAI_API_KEY=${OPENAI_API_KEY:-sk-placeholder}
+      - INGESTION_OPENAI_MODEL=gpt-4o-mini
+      - OTEL_SERVICE_NAME=ingestion-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    depends_on:
+      - docling-service
+    networks:
+      - backend
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - GATEWAY_CORS_ORIGINS=["http://localhost:3000"]
+      - GATEWAY_INGESTION_SERVICE_HOST=ingestion-service
+      - GATEWAY_INGESTION_SERVICE_PORT=50051
+      - GATEWAY_MATCHMAKING_SERVICE_URL=http://matchmaking-service:8001
+      - OTEL_SERVICE_NAME=api-gateway
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    depends_on:
+      - ingestion-service
+      - matchmaking-service
+    networks:
+      - backend
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - api-gateway
+    networks:
+      - backend
+
+  pgadmin:
+    image: dpage/pgadmin4
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - backend
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks:
+      - backend
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - backend
+
+  grafana:
+    image: grafana/grafana:10.4.1
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - backend
+
+volumes:
+  pgdata:
+  pgadmin_data:
+  grafana_data:
+
+networks:
+  backend:
+    driver: bridge

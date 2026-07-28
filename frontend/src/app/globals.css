@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 98.5%;
+    --foreground: 180 15% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 10%;
+    --primary: 174 62% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 10% 96%;
+    --secondary-foreground: 220 15% 10%;
+    --muted: 220 10% 96%;
+    --muted-foreground: 220 8% 46%;
+    --accent: 16 83% 53%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 10% 91%;
+    --input: 220 10% 91%;
+    --ring: 174 62% 40%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-teal-600 to-teal-700 text-white font-semibold
+           hover:from-teal-700 hover:to-teal-800 shadow-md shadow-teal-600/20
+           transition-all duration-200 hover:shadow-lg hover:shadow-teal-600/30;
+  }
+
+  .btn-accent {
+    @apply bg-gradient-to-r from-coral-500 to-orange-500 text-white font-semibold
+           hover:from-coral-600 hover:to-orange-600 shadow-md shadow-orange-500/20
+           transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/30;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-teal-600 via-teal-500 to-coral-500 bg-clip-text text-transparent;
+  }
+
+  .card-hover {
+    @apply transition-all duration-200 hover:border-teal-200 hover:shadow-lg hover:shadow-teal-500/5;
+  }
+
+  .hero-gradient {
+    background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 20%, #fafafa 45%, #fff7ed 75%, #fffbeb 100%);
+  }
+}
