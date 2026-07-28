@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Job } from "@/types/jobs";
-import { listJobs, type Job } from "@/lib/api";
+import { listJobs } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { CityInput } from "@/components/ui/city-input";
 import { MapPin, Briefcase, Clock, ArrowRight, Sparkles, TrendingUp, Zap } from "lucide-react";
