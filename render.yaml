@@ -9,7 +9,7 @@ services:
   - type: web
     name: jobber-frontend
     runtime: node
-    buildCommand: cd frontend && npm install --no-audit --no-fund && npm run build
+    buildCommand: cd frontend && npm install --no-audit --no-fund && npx next build
     startCommand: cd frontend && npx next start -p $PORT
     envVars:
       - key: NEXT_PUBLIC_API_URL
