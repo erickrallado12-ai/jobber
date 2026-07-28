@@ -9,7 +9,7 @@ services:
   - type: web
     name: jobber-frontend
     runtime: node
-    buildCommand: cd frontend && npm install --no-audit --no-fund && chmod +x node_modules/.bin/next && npx next build
+    buildCommand: cd frontend && npm install --no-audit --no-fund && chmod +x node_modules/.bin/next && NEXT_PUBLIC_API_URL=https://jobber-api.onrender.com npx next build
     startCommand: cd frontend && npx next start -p $PORT
     envVars:
       - key: NEXT_PUBLIC_API_URL

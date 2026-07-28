@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Job } from "@/types/jobs";
-import { listJobs } from "@/lib/api";
+import { listJobs, type Job } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { CityInput } from "@/components/ui/city-input";
 import { MapPin, Briefcase, Clock, ArrowRight, Sparkles, TrendingUp, Zap } from "lucide-react";
@@ -166,7 +166,7 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-        ) : featuredJobs.length === 0 ? (
+        ) : !Array.isArray(featuredJobs) || featuredJobs.length === 0 ? (
           <div className="text-center py-16 rounded-xl border border-dashed border-teal-200 bg-gray-50/50">
             <Briefcase className="h-12 w-12 text-teal-300 mx-auto mb-4" />
             <p className="text-muted-foreground">No open positions yet.</p>
