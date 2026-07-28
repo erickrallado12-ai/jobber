@@ -13,7 +13,6 @@ services:
     startCommand: cd frontend && npx next start -p $PORT
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        sync: false
         value: https://jobber-api.onrender.com
 
   - type: web
@@ -31,5 +30,4 @@ services:
       - key: GATEWAY_OPENAI_API_KEY
         sync: false
       - key: GATEWAY_CORS_ORIGINS
-        sync: false
         value: '["https://jobber-frontend.onrender.com"]'
