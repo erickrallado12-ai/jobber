@@ -25,8 +25,9 @@ HTTPXClientInstrumentor().instrument()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    client = AsyncOpenAI(api_key=settings.openai_api_key)
-    await client.embeddings.create(model=settings.openai_embedding_model, input="warmup")
+    if settings.openai_api_key:
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        await client.embeddings.create(model=settings.openai_embedding_model, input="warmup")
     yield
 
 
