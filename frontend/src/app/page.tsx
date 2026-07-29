@@ -7,6 +7,7 @@ import type { Job } from "@/types/jobs";
 import { listJobs } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { CityInput } from "@/components/ui/city-input";
+import { KeywordInput } from "@/components/ui/keyword-input";
 import { MapPin, Briefcase, Clock, ArrowRight, Sparkles, TrendingUp, Zap } from "lucide-react";
 
 function formatSalary(job: Job): string | null {
@@ -87,16 +88,12 @@ export default function HomePage() {
       <div className="relative max-w-2xl mx-auto px-6 -mt-4" style={{ zIndex: 50 }}>
         <form onSubmit={handleSearch}>
           <div className="flex flex-col sm:flex-row items-stretch gap-3 bg-white p-3 rounded-2xl shadow-xl shadow-teal-500/8 border border-gray-200">
-            <div className="flex-1 flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-100/60">
-              <Briefcase className="h-4.5 w-4.5 text-teal-400 shrink-0" />
-              <input
-                type="text"
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                placeholder="Job title, keywords, or company"
-                className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-              />
-            </div>
+            <KeywordInput
+              value={keyword}
+              onChange={setKeyword}
+              placeholder="Job title, keywords, or company"
+              className="flex-1"
+            />
             <div className="flex-1 flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-100/60">
               <CityInput
                 value={city}

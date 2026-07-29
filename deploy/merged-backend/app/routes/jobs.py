@@ -191,15 +191,17 @@ async def list_jobs(
     if status:
         stmt = stmt.where(Job.status == status)
     if q:
-        pattern = f"%{q}%"
-        stmt = stmt.where(
-            or_(
-                Job.title.ilike(pattern),
-                Job.description.ilike(pattern),
-                Job.requirements.ilike(pattern),
-                cast(Job.skills, String).ilike(pattern),
+        words = q.strip().split()
+        for word in words:
+            pattern = f"%{word}%"
+            stmt = stmt.where(
+                or_(
+                    Job.title.ilike(pattern),
+                    Job.description.ilike(pattern),
+                    Job.requirements.ilike(pattern),
+                    cast(Job.skills, String).ilike(pattern),
+                )
             )
-        )
     if city:
         stmt = stmt.where(Job.location.ilike(f"%{city}%"))
     if employment_type:

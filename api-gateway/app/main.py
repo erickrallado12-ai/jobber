@@ -16,6 +16,7 @@ from app.core.grpc_client import grpc_client
 from app.routes.resume import router as resume_router
 from app.routes.matchmaking import router as matchmaking_router
 from app.routes.locations import router as locations_router
+from app.routes.keywords import router as keywords_router
 
 resource = Resource.create({"service.name": "api-gateway"})
 provider = TracerProvider(resource=resource)
@@ -51,3 +52,4 @@ Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 app.include_router(resume_router)
 app.include_router(matchmaking_router)
 app.include_router(locations_router)
+app.include_router(keywords_router)

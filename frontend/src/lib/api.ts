@@ -281,6 +281,15 @@ export async function searchLocations(
 }
 
 
+export async function searchKeywords(
+  q: string,
+  limit = 10
+): Promise<string[]> {
+  const searchParams = new URLSearchParams({ q, limit: String(limit) });
+  return api(`/api/v1/keywords?${searchParams}`);
+}
+
+
 export interface AuthUser {
   id: string;
   email: string;

@@ -8,6 +8,7 @@ import { listJobs, getJob } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CityInput } from "@/components/ui/city-input";
+import { KeywordInput } from "@/components/ui/keyword-input";
 import {
   MapPin,
   Briefcase,
@@ -174,21 +175,12 @@ function JobsSearchContent() {
       <div className="bg-white border-b border-gray-200 shrink-0">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <form onSubmit={handleSearch} className="flex items-center gap-3">
-            <div className="flex-1 flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gray-100/60 border border-transparent focus-within:border-gray-300 focus-within:bg-white transition-all">
-              <Search className="h-4 w-4 text-teal-400 shrink-0" />
-              <input
-                type="text"
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                placeholder="Job title, keywords, or company"
-                className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-              />
-              {keyword && (
-                <button type="button" onClick={() => setKeyword("")} className="text-muted-foreground hover:text-foreground">
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+            <KeywordInput
+              value={keyword}
+              onChange={setKeyword}
+              placeholder="Job title, keywords, or company"
+              className="flex-1"
+            />
             <div className="flex-1 flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gray-100/60 border border-transparent focus-within:border-gray-300 focus-within:bg-white transition-all">
               <CityInput
                 value={city}

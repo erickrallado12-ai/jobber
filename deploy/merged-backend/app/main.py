@@ -16,7 +16,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.core.config import settings
 from app.core.database import engine
 from app.models.db import Base
-from app.routes import applications, auth, generation, jobs, locations, matching, resume, users
+from app.routes import applications, auth, generation, jobs, keywords, locations, matching, resume, users
 
 
 resource = Resource.create({"service.name": "jobber-api"})
@@ -54,6 +54,7 @@ app.include_router(applications.router)
 app.include_router(auth.router)
 app.include_router(generation.router)
 app.include_router(jobs.router)
+app.include_router(keywords.router)
 app.include_router(locations.router)
 app.include_router(matching.router)
 app.include_router(resume.router)
