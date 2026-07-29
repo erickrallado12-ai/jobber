@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 from openai import AsyncOpenAI
 from opentelemetry import trace
@@ -28,6 +29,7 @@ HTTPXClientInstrumentor().instrument()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.create_all)
     if settings.openai_api_key:
         client = AsyncOpenAI(api_key=settings.openai_api_key)
