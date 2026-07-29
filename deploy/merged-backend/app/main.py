@@ -13,6 +13,8 @@ from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
+from app.core.database import engine
+from app.models.db import Base
 from app.routes import applications, auth, generation, jobs, locations, matching, resume, users
 
 
@@ -25,6 +27,8 @@ HTTPXClientInstrumentor().instrument()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     if settings.openai_api_key:
         client = AsyncOpenAI(api_key=settings.openai_api_key)
         await client.embeddings.create(model=settings.openai_embedding_model, input="warmup")
