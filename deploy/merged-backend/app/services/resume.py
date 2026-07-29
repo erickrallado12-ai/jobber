@@ -25,23 +25,25 @@ def _get_client() -> AsyncOpenAI:
 
 
 def extract_text_pymupdf(file_content: bytes, file_extension: str) -> str:
-    import pymupdf
-    from pymupdf4llm import to_markdown
-
     tmp_path = None
     try:
+        import pymupdf
+
         with tempfile.NamedTemporaryFile(
             suffix=f".{file_extension}", delete=False, dir="/tmp"
         ) as tmp:
             tmp.write(file_content)
             tmp_path = tmp.name
 
-        md_text = to_markdown(tmp_path)
-        stripped = md_text.strip()
+        doc = pymupdf.open(tmp_path)
+        text = "".join(page.get_text() for page in doc)
+        doc.close()
+
+        stripped = text.strip()
         if len(stripped) < 20:
             logger.info("PyMuPDF extracted too little text (%d chars)", len(stripped))
             return ""
-        logger.info("PyMuPDF extracted %d chars of markdown text", len(stripped))
+        logger.info("PyMuPDF extracted %d chars of text", len(stripped))
         return stripped
     except Exception as e:
         logger.warning("PyMuPDF extraction failed: %s", e)
