@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { searchLocations } from "@/lib/api";
@@ -24,6 +25,7 @@ export function CityInput({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -45,6 +47,31 @@ export function CityInput({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  function updateMenuPosition() {
+    if (wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      setMenuStyle({
+        position: "fixed",
+        left: `${rect.left}px`,
+        top: `${rect.bottom + 4}px`,
+        width: `${Math.max(rect.width, 320)}px`,
+        zIndex: 99999,
+      });
+    }
+  }
+
+  useEffect(() => {
+    if (open) {
+      updateMenuPosition();
+      window.addEventListener("scroll", updateMenuPosition, true);
+      window.addEventListener("resize", updateMenuPosition);
+    }
+    return () => {
+      window.removeEventListener("scroll", updateMenuPosition, true);
+      window.removeEventListener("resize", updateMenuPosition);
+    };
+  }, [open, results]);
 
   const fetchResults = useCallback((q: string) => {
     if (q.length < 1) {
@@ -139,10 +166,10 @@ export function CityInput({
         )}
       </div>
 
-      {open && results.length > 0 && (
+      {open && results.length > 0 && typeof document !== "undefined" && createPortal(
         <div
-          className="absolute left-0 right-0 mt-1 rounded-xl border border-gray-200 bg-white shadow-lg shadow-gray-200/50 max-h-60 overflow-y-auto"
-          style={{ zIndex: 9999 }}
+          className="rounded-xl border border-gray-200 bg-white shadow-lg shadow-gray-200/50 max-h-60 overflow-y-auto"
+          style={menuStyle}
         >
           {results.map((loc, i) => {
             const display =
@@ -170,7 +197,8 @@ export function CityInput({
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
